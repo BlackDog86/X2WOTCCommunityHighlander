@@ -87,6 +87,7 @@ var float m_LocalYOffset;
 var localized string m_strReinforcementsTitle;
 var localized string m_strReinforcementsBody;
 
+var int LastHistoryIndex;
 var int VisualizedHistoryIndex;
 
 // kUnit, the unit this flag is associated with.
@@ -190,6 +191,7 @@ simulated function UpdateFriendlyStatus()
 simulated function RespondToNewGameState(XComGameState NewState, bool bForceUpdate = false)
 {
 	local XComGameState_BaseObject ObjectState;
+	local int HistoryIndex;
 
 	//the manager responds to a game state before on init is called on this flag in a replay or a tutorial.
 	//do not allow calls too early, because unit flag uses direct invoke which results in bad calls pre-init 
@@ -211,7 +213,16 @@ simulated function RespondToNewGameState(XComGameState NewState, bool bForceUpda
 		}
 
 		if( ObjectState != None )
-			UpdateFromState(ObjectState, , bForceUpdate);
+		{
+			HistoryIndex = ObjectState.GetParentGameState().HistoryIndex;
+
+			`log("UIUnitFlag > RespondToNewGameState GetParentGameState().HistoryIndex="$HistoryIndex$" VisualizedHistoryIndex="$VisualizedHistoryIndex$" bLastEventInChain="$ObjectState.GetParentGameState().GetContext().bLastEventInChain);
+			if (LastHistoryIndex < HistoryIndex)
+			{
+				LastHistoryIndex = HistoryIndex;
+				UpdateFromState(ObjectState, , bForceUpdate);
+			}
+		}
 	}
 }
 
@@ -222,6 +233,8 @@ simulated function UpdateFromState(XComGameState_BaseObject NewState, bool bInit
 
 	if( !bIsInited )
 		return;
+	
+	`log("UIUnitFlag > UpdateFromState HistoryIndex = "$NewState.GetParentGameState().HistoryIndex);
 
 	UnitState = XComGameState_Unit(NewState);
 	if( UnitState != none )
