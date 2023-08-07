@@ -216,7 +216,6 @@ simulated function RespondToNewGameState(XComGameState NewState, bool bForceUpda
 		{
 			HistoryIndex = ObjectState.GetParentGameState().HistoryIndex;
 
-			`log("UIUnitFlag > RespondToNewGameState GetParentGameState().HistoryIndex="$HistoryIndex$" VisualizedHistoryIndex="$VisualizedHistoryIndex$" bLastEventInChain="$ObjectState.GetParentGameState().GetContext().bLastEventInChain);
 			if (LastHistoryIndex < HistoryIndex)
 			{
 				LastHistoryIndex = HistoryIndex;
@@ -234,8 +233,6 @@ simulated function UpdateFromState(XComGameState_BaseObject NewState, bool bInit
 	if( !bIsInited )
 		return;
 	
-	`log("UIUnitFlag > UpdateFromState HistoryIndex = "$NewState.GetParentGameState().HistoryIndex);
-
 	UnitState = XComGameState_Unit(NewState);
 	if( UnitState != none )
 	{
