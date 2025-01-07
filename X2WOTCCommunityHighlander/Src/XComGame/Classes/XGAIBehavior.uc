@@ -48,7 +48,7 @@ struct native AoETargetingInfo
 	var bool bAreaSearchSpace;			// if true, also target adjacent points around our test locations.
 	var bool bRequireLoS;				// Require Line of Sight between the shooter and the target
 	var bool bCountAdjacentAsHits;		// if true, hitting adjacent tiles to targets count as a valid hit.
-	var bool bTestTargetEffectsApply;	// Only consider units that are valid for the MultiTarget effects on the ability.
+	var bool bTestTargetEffectsApply;	// Only consider units that are valid for the MultiTarget effects on the ability.	
 	var bool bIgnoreRepeatAttackList;   // Ignore restrictions on tiles that have already been used for AoEs.
 
 	structdefaultproperties
@@ -1087,8 +1087,10 @@ function bool IsAbilityReady(Name AbilityName, optional array<Name> ParamList)
 	FindAbilityByName(AbilityName, AbilityState);
 	if (CheckAbilityStateReady(AbilityState, ParamList))
 	{
+		`log("XGAIBehavior::AbilityIsReady:" @ AbilityState.GetMyTemplateName(),,'BDLOG');
 		return true;
 	}
+	`log("XGAIBehavior::AbilityIsNotReady:" @ AbilityState.GetMyTemplateName(),,'BDLOG');
 	return false;
 }
 
@@ -1114,7 +1116,7 @@ function bool CheckAbilityStateReady( XComGameState_Ability AbilityState, option
 				&& Error != 'AA_NotInRange'
 				&& Error != 'AA_Success')
 			{
-				`LogAIBT(AbilityState.GetMyTemplateName()@"IsAbilityReady FAILED due to failure code:"$ErrorName@"\n");
+				`Log(AbilityState.GetMyTemplateName()@"IsAbilityReady FAILED due to failure code:"$ErrorName@"\n",,'BDLOG');
 				return false;
 			}
 		}
@@ -1122,7 +1124,7 @@ function bool CheckAbilityStateReady( XComGameState_Ability AbilityState, option
 	}
 	else
 	{
-		`LogAIBT("IsAbilityAvailable failed - Ability State Not Found:"$AbilityState.GetMyTemplateName()@"\n");
+		`Log("IsAbilityAvailable failed - Ability State Not Found:"$AbilityState.GetMyTemplateName()@"\n",,'BDLOG');
 	}
 	return false;
 
@@ -6704,7 +6706,6 @@ function bool GetUnfilteredAoETargetList(out array<XComGameState_Unit> UnitList,
 			UnitList.AddItem(UnitState);
 		}
 	}
-
 	// Remove all units from list with specified effect(s).
 	if (DeprioritizedEffects.Length > 0)
 	{
@@ -6751,6 +6752,10 @@ function bool GetAllAoETargets(out array<TTile> TargetList, AoETargetingInfo Pro
 	local bool bValid;
 	local X2Effect MultiTargetEffect;
 	local X2AbilityTemplate AbilityTemplate;
+	local int i;
+	local array<X2Effect> TargetEffects;
+	local X2Effect TestEffect;
+	local X2GrenadeTemplate TestGrenadeTemplate;
 
 	if (!GetUnfilteredAoETargetList(UnitList, Profile, RequiredTarget, DeprioritizedEffects))
 	{
@@ -6761,6 +6766,7 @@ function bool GetAllAoETargets(out array<TTile> TargetList, AoETargetingInfo Pro
 
 	foreach UnitList(TargetState)
 	{
+		`log("XGAIBehaviour::GetAllAOETargets: UnfilteredTargetList:" @ TargetState.GetMyTemplateName() @ TargetState.ObjectID,,'BDLOG');
 		if( Profile.bTestLocationValidity )
 		{
 			Target.AdditionalTargets.Length = 0;
@@ -6772,17 +6778,71 @@ function bool GetAllAoETargets(out array<TTile> TargetList, AoETargetingInfo Pro
 		}
 
 		if ( Profile.bTestTargetEffectsApply )
-		{
+		{	
 			AbilityTemplate = AbilityState.GetMyTemplate();
+			`log("XGAIBehaviour::GetAllAOETargets:TestingTargetEffectsApply on Ability: " @ AbilityState.GetMyTemplateName(),,'BDLOG');
 			// Ignore units that are immune to this ability. (passes as long as any effect applies to this unit)
-			foreach AbilityTemplate.AbilityMultiTargetEffects(MultiTargetEffect)
+			// Special handling for grenade profiles
+			If (AbilityTemplate.bUseLaunchedGrenadeEffects)
 			{
-				if (MultiTargetEffect.TargetIsValidForAbility(TargetState, UnitState, AbilityState))
+				TestGrenadeTemplate = X2GrenadeTemplate(AbilityState.GetSourceWeapon().GetLoadedAmmoTemplate(AbilityState));
+				If (TestGrenadeTemplate != none)
 				{
-					bValid = true;
-					break;
+					TargetEffects = TestGrenadeTemplate.LaunchedGrenadeEffects;
+				}
+				If (TargetEffects.Length > 0)
+				{
+					bValid = false;
+					foreach TargetEffects(TestEffect)
+					{				
+						`log("Testing" @ TestEffect.Class @ "For validity",,'BDLOG');
+						if(TestEffect.TargetIsValidForAbility(TargetState, UnitState, AbilityState))
+						{
+							bValid = true;
+							`log("Valid: " @ bValid,,'BDLOG');
+							//break; for logging
+						}
+					}			
 				}
 			}
+			else if (AbilityTemplate.bUseThrownGrenadeEffects)
+			{
+				TestGrenadeTemplate = X2GrenadeTemplate(AbilityState.GetSourceWeapon().GetLoadedAmmoTemplate(AbilityState));
+				If (TestGrenadeTemplate != none)
+				{
+					TargetEffects = TestGrenadeTemplate.LaunchedGrenadeEffects;
+				}
+				If (TargetEffects.Length > 0)
+				{
+					bValid = false;
+					foreach TargetEffects(TestEffect)
+					{				
+						`log("Testing" @ TestEffect.Class @ "For validity",,'BDLOG');
+						if(TestEffect.TargetIsValidForAbility(TargetState, UnitState, AbilityState))
+						{							
+							bValid = true;
+							`log("Valid: " @ bValid,,'BDLOG');
+							// break;
+						}
+					}			
+				}
+			}
+			else
+			{
+				foreach AbilityTemplate.AbilityMultiTargetEffects(MultiTargetEffect)
+				{
+					`log("XGAIBehaviour::GetAllAOETargets:MultiTargetEffects: " @ MultiTargetEffect.Class,,'BDLOG');
+					bValid = false;
+					`log("Testing: " @ MultiTargetEffect.Class @ "For validity",,'BDLOG');
+					if (MultiTargetEffect.TargetIsValidForAbility(TargetState, UnitState, AbilityState))
+					{
+						bValid = true;
+						`log("Valid: " @ bValid,,'BDLOG');
+						// break; for logging
+					}
+				}
+			}
+			`log("Final Validity: " @ bValid,,'BDLOG');
 			if (!bValid)
 			{
 				continue;
@@ -6818,6 +6878,10 @@ function bool GetAllAoETargets(out array<TTile> TargetList, AoETargetingInfo Pro
 				TargetStates.AddItem(TargetState);
 			}
 		}
+	}
+	for(i = 0; i < TargetStates.Length; i++)
+	{
+	`log("XGAIBehaviour::GetAllAOETargets: FilteredTargetList:" @ TargetStates[i].GetMyTemplateName() @ TargetStates[i].ObjectID,,'BDLOG');
 	}
 	return TargetList.Length > 0;
 }

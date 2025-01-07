@@ -205,25 +205,46 @@ function bool TargetIsValidForAbility(XComGameState_Unit TargetState, XComGameSt
 	{
 		AvailableCode = kCondition.AbilityMeetsCondition(AbilityStateObject, TargetState);
 		if (AvailableCode != 'AA_Success')
+		{
+			`log("X2Effect::TargetIsValidForAbility:Condition 1 not met - target invalid",,'BDLOG');
 			return false;
-
+		}
 		AvailableCode = kCondition.MeetsCondition(TargetState);
 		if (AvailableCode != 'AA_Success')
-			return false;
-
-		AvailableCode = kCondition.MeetsConditionWithSource(TargetState, SourceStateObject);
-		if (AvailableCode != 'AA_Success')
-			return false;
-	}
-	DamageInterface = Damageable(TargetState);
-	if (DamageInterface != none)
-	{
-		foreach DamageTypes(DamageType)
 		{
-			if (DamageInterface.IsImmuneToDamage(DamageType))
-				return false;
+			`log("X2Effect::TargetIsValidForAbility:Condition 2 not met - target invalid",,'BDLOG');
+			return false;
+		}
+		AvailableCode = kCondition.MeetsConditionWithSource(TargetState, SourceStateObject);		
+		if (AvailableCode != 'AA_Success')
+		{
+			`log("X2Effect::TargetIsValidForAbility:Condition 3 not met - target invalid",,'BDLOG');
+			return false;
 		}
 	}
+	DamageInterface = Damageable(TargetState);	
+	if (DamageInterface != none)
+	{
+		`log("X2Effect::TargetIsValidForAbility:DamageTypesLength:" @ DamageTypes.Length,,'BDLOG');
+		if(DamageTypes.Length == 0)
+		{
+			`log("X2Effect::TargetIsValidForAbility: Ability has no damage type, ignore");
+			return false;
+		}
+		else
+		{
+			foreach DamageTypes(DamageType)
+			{			
+				`log("X2Effect::TargetIsValidForAbility: Testing DamageType: " @ DamageType);
+				if (DamageInterface.IsImmuneToDamage(DamageType))
+				{
+					`log("X2Effect::TargetIsValidForAbility: No damage type on effect or target is immune: " @ DamageType @ " Damage - target invalid",,'BDLOG');
+					return false;
+				}
+			}
+		}
+	}
+	`log("X2Effect::TargetIsValidForAbility: Target should be valid",,'BDLOG');
 	return true;
 }
 
