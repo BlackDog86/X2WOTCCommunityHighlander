@@ -310,22 +310,27 @@ simulated function ECoverState PredictCoverState(Vector vFromLoc, XComCoverPoint
 
 	if (`IS_VALID_COVER(hCoverPoint) && CanUseCover())
 	{
+		`log("Cover is valid & unit can use it",,'BDLOG');
+		
 		vFromDir = hCoverPoint.ShieldLocation - vFromLoc;
 		vFromDir = Normal(vFromDir);
 		vFromDirRotated90 = TransformVectorByRotation(rot(0,16384,0), vFromDir);		
 
 		for (i = 0; i < 4; i++)
 		{
-			CoverDir = `IDX_TO_DIR(i);
+			CoverDir = `IDX_TO_DIR(i);			
+
 			if (`HAS_COVER_IN_DIR(hCoverPoint, CoverDir))
 			{
 				vOutCoverDirection = `XWORLD.GetWorldDirection(CoverDir, `IS_DIAGONAL_COVER(hCoverPoint));
-
+				`log("Unit has cover in direction:" @ CoverDir,,'BDLOG');
 				fDot = NoZDot(vFromDir, vOutCoverDirection);
 				fDot90 = NoZDot(vFromDirRotated90, vOutCoverDirection);
 
 				bHasPeekLeft = `HAS_LPEEK_IN_DIR(hCoverPoint, CoverDir);
 				bHasPeekRight = `HAS_RPEEK_IN_DIR(hCoverPoint, CoverDir);
+
+				`log("Peek Left:" @ bHasPeekLeft @ "Peek Right:" @ bHasPeekRight,,'BDLOG');
 
 				//fDot += (bHasPeekLeft || bHasPeekRight) ? 3.0f : 0.0f; //Cover directions with peekarounds always trump those without
 
@@ -335,11 +340,12 @@ simulated function ECoverState PredictCoverState(Vector vFromLoc, XComCoverPoint
 					iBestCoverIdx = i;
 					fBestDot = fDot;
 					fBestCoverDir = vOutCoverDirection;
-					
+					`log(iBestCoveridx @ ":" @ fBestDot @ ":" @ fBestCoverDir,,'BDLOG');
 					// Jwats: Only care about peeks if only 1 peek side is valid and we are within some degrees of running straight at cover (Or close to 180 from the cover like climbovers)
 					AngleBetween = RadToDeg * acos(fDot);
 					IdleStateMachine.TestEnemyUnitsForPeekSides(i, bEnemiesOnLeftPeek, bEnemiesOnRightPeek, HistoryIndex);
 					CareAboutPeeks = (bHasPeekLeft != bHasPeekRight || bEnemiesOnLeftPeek != bEnemiesOnRightPeek) && (AngleBetween < UsePeeksThreshold || (180.0f - AngleBetween) < UsePeeksThreshold);
+					`log("Do we care about peeking?:" @ CareAboutPeeks,,'BDLOG');
 					if( CareAboutPeeks )
 					{
 						if( bEnemiesOnRightPeek != bEnemiesOnLeftPeek )
@@ -373,7 +379,7 @@ simulated function ECoverState PredictCoverState(Vector vFromLoc, XComCoverPoint
 					{
 						PickLeft = false;
 					}
-
+					`log("PickLeft:" @ PickLeft);
 					// Jwats: Peek left means right shoulder on wall
 					if (PickLeft)
 					{
@@ -385,6 +391,7 @@ simulated function ECoverState PredictCoverState(Vector vFromLoc, XComCoverPoint
 						eBestCoverState = (`IS_LOW_COVER(hCoverPoint, CoverDir)) ? eCS_LowLeft : eCS_HighLeft;
 						fBestCoverDir = QuatRotateVector(QuatFromRotator(RightPeekRotator), vOutCoverDirection);
 					}
+					`log("eBestCoverState:" @ eBestCoverState,,'BDLOG');
 				}
 			}
 		}
@@ -396,6 +403,7 @@ simulated function ECoverState PredictCoverState(Vector vFromLoc, XComCoverPoint
 	}
 	else
 	{
+		`log("Unit is not in cover accoding to IS_VALID_COVER",,'BDLOG');
 		vOutCoverDirection = Vector(Rotation);
 		OutCoverIndex = -1;
 		return eCS_None;
