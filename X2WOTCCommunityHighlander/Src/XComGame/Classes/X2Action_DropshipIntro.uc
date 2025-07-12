@@ -148,14 +148,16 @@ private function AddUnitsToMatinee()
 	GetAllIntroSlotPrefixes(IntroPrefixes);
 	foreach IntroPrefixes(IntroPrefix)
 	{
+		`log("IntroPrefix:" @ IntroPrefix,,'BDLOG');
 		for(UnitIndex = 1; UnitIndex <= DropshipSlotCount; UnitIndex++)
 		{
 			if(UsedSlots.Find(name(IntroPrefix $ UnitIndex)) == INDEX_NONE)
 			{
+				`log("Removing Unit at Index: " @ UnitIndex @ "from Matinee - Slot empty",,'BDLOG');
 				AddUnitToMatinee(name(IntroPrefix $ UnitIndex), none);
 			}
 		}
-	}
+	} 
 }
 
 //We never time out
@@ -174,6 +176,7 @@ private function FindDropshipMatinee()
 
 	IntroDefinition = MissionManager.GetActiveMissionIntroDefinition();
 	MatineePrefix = IntroDefinition.MatineeSequences[MatineeSequenceIndex].MatineeCommentPrefixes[MatineeIndex];
+	`log("FindDropshipMatinee: " @ IntroDefinition.MatineePackage @ ":" @ MatineePrefix,,'BDLOG');
 	SelectMatineeByTag(MatineePrefix);
 }
 
@@ -213,8 +216,19 @@ simulated state Executing
 		MissionManager = `TACTICALMISSIONMGR;
 		MissionIntro = MissionManager.GetActiveMissionIntroDefinition();
 		
-		return MatineeIndex < MissionIntro.MatineeSequences[MatineeSequenceIndex].MatineeCommentPrefixes.Length
-				&& MissionIntro.MatineeSequences[MatineeSequenceIndex].MatineeCommentPrefixes[MatineeIndex] != "";
+		`log("HasMoreMatinees:SequnceIndex:" @ MatineeSequenceIndex,,'BDLOG');
+		`log("HasMoreMatinees:NumberOfCommentPrefixes:" @ MissionIntro.MatineeSequences[MatineeSequenceIndex].MatineeCommentPrefixes.Length,,'BDLOG');
+		
+		if(MatineeIndex < MissionIntro.MatineeSequences[MatineeSequenceIndex].MatineeCommentPrefixes.Length	&& MissionIntro.MatineeSequences[MatineeSequenceIndex].MatineeCommentPrefixes[MatineeIndex] != "")
+		{
+		`log("HasMoreMatinees:True",,'BDLOG');
+		return true;
+		}
+		else
+		{
+		`log("HasMoreMatinees:False",,'BDLOG');
+		return false;
+		}
 	}
 
 	function SetupMatineeBase()

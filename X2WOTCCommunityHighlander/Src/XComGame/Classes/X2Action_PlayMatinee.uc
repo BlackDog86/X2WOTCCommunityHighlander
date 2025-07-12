@@ -117,11 +117,13 @@ function BindUnitToMatineeGroup(name GroupName, XComGameState_Unit GameStateUnit
 
 	NewMapping.GroupName = GroupName;
 	NewMapping.Unit = GameStateUnit;
+	`log("Binding unit to matinee group:" @ NewMapping.GroupName @ "Unit:" @ GameStateUnit.GetMyTemplateName @ ":" @ GameStateUnit.GetFullName,,'BDLOG');
 	UnitMappings.AddItem(NewMapping);
 }
 
 function SetMatineeLocation(Vector NewLocation, optional Rotator NewRotation)
 {
+	`log("MatineeLocation:" @ NewLocation.X @ ":" @ NewLocation.Y @ ":" @ NewLocation.Z,,'BDLOG');
 	MatineeBaseLocation = NewLocation;
 	MatineeBaseRotation = NewRotation;
 }
@@ -160,6 +162,7 @@ function SetMatineeBase(name MatineeBaseActorTag, optional name MatineeBaseSocke
 		{
 			if (PotentialBase.Tag == MatineeBaseActorTag)
 			{
+				`log("MatineeBase Added:" @ PotentialBase.Tag,,'BDLOG');
 				MatineeBases.AddItem(PotentialBase);
 			}
 		}
@@ -184,6 +187,7 @@ function XComUnitPawn FindPawnForUnitInMatinee(StateObjectReference UnitRef)
 		if (UnitMapping.Unit.ObjectID == UnitRef.ObjectID)
 		{
 			FoundPawn = XComUnitPawn(UnitMapping.CreatedPawn);
+			`log("Pawn Found for Unit",,'BDLOG');
 			break;
 		}
 	}
@@ -201,6 +205,7 @@ private function PrepareUnitsForMatinee()
 		
 	for(Index = 0; Index < UnitMappings.Length; Index++)
 	{
+		`log("Number of units in UnitMappings:" @ UnitMappings.Length,,'BDLOG');
 		if(UnitMappings[Index].Unit != none)
 		{
 			UnitVisualizer = XGUnit(UnitMappings[Index].Unit.GetVisualizer());
@@ -278,6 +283,7 @@ protected function PlayMatinee()
 	local int i;
 
 	// make sure we have a matinee to play
+	`log("Length of Matinees Array at PlayTime:" @ Matinees.Length,,'BDLOG');
 	if(Matinees.Length == 0)
 	{
 		`Redscreen("No matinee specified in X2Action_PlayMatinee!");
@@ -384,32 +390,38 @@ simulated function SelectMatineeByTag(string TagPrefix)
 
 	// randomize the list and take the first one that matches. Since the input is random, the 
 	// selection will also be random
-	FoundMatinees.RandomizeOrder();
+	FoundMatinees.RandomizeOrder();	
+
 	Matinees.Length = 0;
 	for (Index = 0; Index < FoundMatinees.length; Index++)
 	{
 		FoundMatinee = SeqAct_Interp(FoundMatinees[Index]);
+		//`log("ListAllMatinees:ObjComment:" @ FoundMatinee.ObjComment,,'BDLOG');
 		if(FoundMatinee != none && FoundMatinee.BaseMatineeComment == "" && Instr(FoundMatinee.ObjComment, TagPrefix,, true) == 0)
 		{
+			`log("AddedMatinees:ObjComment: " @ FoundMatinee.ObjComment,,'BDLOG');
 			Matinees.AddItem(FoundMatinee);
 			break;
 		}
-	}
-
-	if(Matinees.Length == 0)
-	{
-		`Redscreen("X2Action_PlayMatinee::SelectMatineeByTag(): Could not find Matinee for tag " $ TagPrefix);
-		return;
 	}
 
 	// add any layered auxiallary matinees from mods
 	for (Index = 0; Index < FoundMatinees.length; Index++)
 	{
 		FoundMatinee = SeqAct_Interp(FoundMatinees[Index]);
+		//`log("ListAuxilliaryMatinees:ObjComment:" @ FoundMatinee.ObjComment,,'BDLOG');
 		if(FoundMatinee.BaseMatineeComment == Matinees[0].ObjComment)
 		{
+			`log("AuxilliaryMatineesAdded:ObjComment:" @ FoundMatinee.ObjComment,,'BDLOG');
 			Matinees.AddItem(FoundMatinee);
 		}
+	}
+
+	if(Matinees.Length == 0)
+	{
+		`log("No matinees found",,'BDLOG');
+		`Redscreen("X2Action_PlayMatinee::SelectMatineeByTag(): Could not find Matinee for tag " $ TagPrefix);
+		return;
 	}
 }
 
