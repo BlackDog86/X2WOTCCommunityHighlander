@@ -9098,12 +9098,12 @@ function UpdateGameBoard()
 
 function AddSeenCharacterTemplate(X2CharacterTemplate CharacterTemplate)
 {
-	SeenCharacterTemplates.AddItem(CharacterTemplate.CharacterGroupName);
+	SeenCharacterTemplates.AddItem(CharacterTemplate.DataName);
 }
 
 function bool HasSeenCharacterTemplate(X2CharacterTemplate CharacterTemplate)
 {
-	return (SeenCharacterTemplates.Find(CharacterTemplate.CharacterGroupName) != INDEX_NONE);
+	return (SeenCharacterTemplates.Find(CharacterTemplate.DataName) != INDEX_NONE);
 }
 
 function XComGameState_WorldRegion GetRegionByName(Name RegionTemplateName)
