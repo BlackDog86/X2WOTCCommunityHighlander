@@ -9679,15 +9679,24 @@ state XComMovement extends MoveState // Only accessed via specialized behavior t
 // Start Issue #1550
 simulated function MaybeUnblockPatrolMemberTiles()
 {
+	local array<TTile> Tiles;
+	local int UnitMobility;
+
 	if(	m_kPlayer != None &&
 		m_kPlayer.m_kNav.IsPatrol(m_kUnit.ObjectID, m_kPatrolGroup) &&
 		!m_kPatrolGroup.bDisableGroupMove &&
-		(m_kPlayer.m_ePhase == eAAP_GreenPatrolMovement || m_kPlayer.IsScampering(UnitState.ObjectID)) &&
-		class'X2PathSolver'.static.IsUnitTrapped(UnitState))
+		(m_kPlayer.m_ePhase == eAAP_GreenPatrolMovement || m_kPlayer.IsScampering(UnitState.ObjectID)) )
 	{
-		m_kPatrolGroup.UnblockMemberTiles();
-	}
+		UnitMobility = m_kUnit.GetMobility();
+		m_kUnit.m_kReachableTilesCache.GetAllPathableTiles(Tiles);
 
+		// consider an unit that can't move at least its one action of movement "stuck" and unblock their patrol member tiles
+		if(Tiles.Length <= `METERSTOTILES(UnitMobility))
+		{
+			m_kPatrolGroup.UnblockMemberTiles();
+			m_kUnit.m_kReachableTilesCache.ForceCacheUpdate();
+		}
+	}
 }
 // End Issue #1550
 
