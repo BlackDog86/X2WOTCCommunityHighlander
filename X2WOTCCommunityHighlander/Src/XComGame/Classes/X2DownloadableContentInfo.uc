@@ -705,15 +705,15 @@ static function OnPreCreateTemplates()
 }
 /// End issue #412
 
-/// Start Issue #419
-/// <summary>
-/// Called from X2AbilityTag.ExpandHandler
-/// Expands vanilla AbilityTagExpandHandler to allow reflection
-/// </summary>
+// Start issue #419
+/// HL-Docs: feature:AbilityTagExpandHandler_CH; issue:419; tags:
+/// Called from X2AbilityTag::ExpandHandler() - Expands functionality of vanilla AbilityTagExpandHandler. 
+/// Allows mods to use gamestate objects to fill in tagged variables. Useful if there are values that are altered during runtime or dynamic custom text.
 static function bool AbilityTagExpandHandler_CH(string InString, out string OutString, Object ParseObj, Object StrategyParseOb, XComGameState GameState)
 {
 	return false;
 }
+//End Issue #419
 
 /// Start Issue #409
 /// <summary>
@@ -782,16 +782,22 @@ static function bool UseAlternateMissionIntroDefinition(MissionDefinition Active
 }
 // End Issue #395
 
-/// Start Issue #455
-/// <summary>
+// Start Issue #455
+/// HL-Docs: feature:UnitPawnPostInitAnimTree; issue:455; tags:pawns
 /// Called from XComUnitPawnNativeBase.PostInitAnimTree
 /// Allows patching the animtree template before its initialized.
-/// </summary>
+/// #Issue #1514 Addendum
+/// `UnitState` will always be `None`
+///
+/// This hook is called in `PostInitAnimTree` event function in `XComUnitPawnNativeBase`, which is called as part of the `Spawn` function
+/// when a pawn is spawned. Because of this, `UnitState` will be `None`, `Pawn` has no owner or `ObjectID` or a `XGUnit` assigned to it
+/// and you can't retrieve the state the pawn was created from.
+/// You can fetch the archetype the pawn was created with `Pawn.ObjectArchetype` for some idea of pawn origins.
 static function UnitPawnPostInitAnimTree(XComGameState_Unit UnitState, XComUnitPawnNativeBase Pawn, SkeletalMeshComponent SkelComp)
 {
 	return;
 }
-/// End Issue #455
+// End Issue #455
 
 // Start Issue #783
 // <summary>
@@ -897,3 +903,70 @@ static function OnLoadedSavedGameWithDLCExisting ()
 {
 }
 // End issue #808
+
+// Start Issue #1524
+/// HL-Docs: feature:OverrideDropshipMapImage; issue:1524; tags:tactical
+/// An image of the objective parcel is fetched for the dropship briefing screen, while players are waiting for the mission to load.
+/// This hook runs in `XComPlayerController::UpdateUIBriefingScreen`, which uses `SelectMapImage` in `XComMapManager` to fetch a map image path for the briefing screen.
+/// This hook runs after the image is picked, and if `OverrideMapImagePath` was modified to not be an empty string, it will be used as the map imagepath instead.
+/// ###Parameters
+/// * `OverrideMapImagePath`: An empty string used to override the map image
+/// * `ObjectiveMapName`: String which was used as a parameter for `SelectMapImage`
+/// * `ChosenMapImagePath`: String which was the result of the function call to `SelectMapImage`
+///
+/// You can use `'MAPS.SelectMapImage("MyMapName", "OptionalBiome")` to find an existing image definition or arbitrarily assign any string to `OverrideMapImagePath`
+static function OverrideDropshipMapImage(out string OverrideMapImagePath, const string ObjectiveMapName, const string ChosenMapImagePath)
+{
+}
+// End Issue #1524
+
+// Start Issue #1535
+/// HL-Docs: feature:OverrideLightingMap; issue:1535; tags:tactical
+/// Called from XComEnvLightingManager:Init
+///
+/// Allows for overriding the tactical mission lighting map after initial search for matching lighting definitions has been done
+/// If length of `OverrideEnvLightingDefs` array is non-zero, then `MatchingEnvLightingDefs` will be overwritten by `OverrideEnvLightingDefs`
+/// You can add one or more lighting definitions to `OverrideEnvLightingDefs` array, and one of them will be randomly selected
+///
+/// Usage example:
+/// ```unrealscript
+/// static function OverrideLightingMap(out array<EnvironmentLightingDefinition> OverrideEnvLightingDefs, const XComGameState_BattleData BattleData, const array<EnvironmentLightingDefinition> MatchingEnvLightingDefs)
+/// {
+///		local XComEnvLightingManager EnvMan;
+///		local EnvironmentLightingDefinition LightDef;
+///		local string MapName;
+///		local ETimeOfDay TimeOfDay;
+///
+///		EnvMan = `ENVLIGHTINGMGR;
+///
+///		MapName = BattleData.MapData.PlotMapName;
+///		TimeOfDay = class'X2StrategyGameRulesetDataStructures'.static.GetTimeOfDay(BattleData.LocalTime);
+///
+///		if(MapName == "MyExamplePlotMapName") // only continue if it's a map we want
+///		{
+///			foreach EnvMan.arrEnvironmentLightingDefs(LightDef)
+///			{
+///				if(TimeOfDay == eTimeOfDay_Night)	// if it's night then find night lighting map
+///				{
+///					if(LightDef.MapName == "XP_LE_AbandonedCity_Night")
+///					{
+///						OverrideEnvLightingDefs.AddItem(LightDef);
+///						break;
+///					}
+///				}
+///				else	// otherwise use the day map
+///				{
+///					if(LightDef.MapName == "XP_LE_AbandonedCity_Day")
+///					{
+///						OverrideEnvLightingDefs.AddItem(LightDef);
+///						break;
+///					}
+///				}
+///			}
+///		}
+/// }
+/// ```
+static function OverrideLightingMap(out array<EnvironmentLightingDefinition> OverrideEnvLightingDefs, const XComGameState_BattleData BattleData, const array<EnvironmentLightingDefinition> MatchingEnvLightingDefs)
+{
+}
+// End Issue #1535
