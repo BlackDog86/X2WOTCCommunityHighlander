@@ -291,7 +291,9 @@ var() TAppearance           kAppearance;
 /**
  *  THESE VARS HAVE BEEN COPIED FROM TCharacter AND ARE NOT REFACTORED YET
  */
-var() protected int         aTraversals[ETraversalType.EnumCount]<FGDEIgnore=true>;
+/// HL-Docs: ref:AIHazardEscape
+/// Read by hazard escape to build the unit's allowed traversals
+var() /* protected */ int         aTraversals[ETraversalType.EnumCount]<FGDEIgnore=true>;
 
 /**
  *  END TCharacter VARS
@@ -7451,6 +7453,73 @@ function GiveStandardActionPoints()
 		ActionPoints.AddItem(class'X2CharacterTemplateManager'.default.StandardActionPoint);
 	}
 }
+
+// Start Issue #1325
+/// HL-Docs: feature:CHL_SetupActionsForBeginTurn; issue:1325; tags:tactical;
+/// A function located in XComGameState_Unit. This variant of the vanilla SetupActionsForBeginTurn comes with a slew of optional parameters to allow
+/// for greater control. If none of the parameters are used, it'll default to behaving like the vanilla SetupActionsForBeginTurn function.
+/// Below is the definitions of these parameters and what they are for:
+///
+/// optional bool GiveActionPoints = true - Controls whether or not a unit will gain the default 2 standard action points.
+///
+///	optional bool ResetUntouchable = true - Controls whether or not the units with untouchable will be reset and able to be acquired again.
+///
+///	optional bool ResetGotFreeFireAction = true - Controls whether or not hair trigger procs reset.
+/// 
+///	optional bool HandleMovesUnitValues = true - Units have some movement related unit values get manipulated in the vanilla SetupActionsForBeginTurn function. This determines if that happens or not.
+/// 
+///	optional bool CleanupBeginTurnUnitValues = true - Controls whether or not unit values with eCleanup_BeginTurn get reset.
+/// 
+///	optional bool UpdateTurnStartLocation = true - Controls whether or not the unit's turn start location gets updated.
+/// 
+///	optional bool ResetPanicTestsPerformedThisTurn = true - Controls whether or not the tracker for the amount of panic tests performed gets reset.
+function CHL_SetupActionsForBeginTurn(	optional bool GiveActionPoints = true,
+										optional bool ResetUntouchable = true,
+										optional bool ResetGotFreeFireAction = true,
+										optional bool HandleMovesUnitValues = true,
+										optional bool CleanupBeginTurnUnitValues = true,
+										optional bool UpdateTurnStartLocation = true,
+										optional bool ResetPanicTestsPerformedThisTurn = true)
+{
+	local XComGameStateHistory History;
+	local StateObjectReference EffectRef;
+	local XComGameState_Effect EffectState;
+	local X2Effect_Persistent EffectTemplate;
+	local UnitValue MovesThisTurn;
+
+	if(GiveActionPoints)
+	{
+		GiveStandardActionPoints();
+
+		if( ActionPoints.Length > 0 )
+		{
+			History = `XCOMHISTORY;
+			foreach AffectedByEffects(EffectRef)
+			{
+				EffectState = XComGameState_Effect(History.GetGameStateForObjectID(EffectRef.ObjectID));
+				EffectTemplate = EffectState.GetX2Effect();
+				EffectTemplate.ModifyTurnStartActionPoints(self, ActionPoints, EffectState);
+			}
+		}
+	}
+
+	if(ResetUntouchable)
+		Untouchable = 0;                    //  untouchable only lasts until the start of your next turn, so always clear it out
+	if(ResetGotFreeFireAction)
+		bGotFreeFireAction = false;                                                      //Reset FreeFireAction flag
+	if(HandleMovesUnitValues)
+	{
+		GetUnitValue('MovesThisTurn', MovesThisTurn);
+		SetUnitFloatValue('MovesLastTurn', MovesThisTurn.fValue, eCleanup_BeginTactical); 
+	}
+	if(CleanupBeginTurnUnitValues)
+		CleanupUnitValues(eCleanup_BeginTurn);
+	if(UpdateTurnStartLocation)
+		TurnStartLocation = TileLocation;
+	if(ResetPanicTestsPerformedThisTurn)
+		PanicTestsPerformedThisTurn = 0;
+}
+// End Issue #1325
 
 function SetupActionsForBeginTurn()
 {
@@ -15838,6 +15907,36 @@ private function SetOverKillUnitValue(int OverKillDamage)
 	SetUnitFloatValue('OverKillDamage', -OverkillDamage, eCleanup_BeginTactical);
 }
 //	End issue #805
+
+//Begin Issue #1575
+/// HL-Docs: feature:EffectImmunity; issue:1575; tags:tactical
+/// This is one of the three functions required to enable boolean management for whether or not X2Effects will be allowed to be applied to a unit.
+/// This enables various functionality that was previously heavily limited by damage typing.
+/// An example use case: We do not want to X2Effect_MindControl to be allowed to be applied to a unit, but we want to allow other Mental-typed effects to effect this unit.
+/// This would enable that. Alternative use case example: We want to block a Chosen from being able to be Frozen, but do not want to block damage from a weapon that is damage typed as Frost
+/// This also provides a solution should we want to block an effect that has no damage typing.
+/// And many more.
+
+function bool IsImmuneToEffect(X2Effect Effect, XComGameState_Unit SourceUnit, XComGameState_Ability AbilityState)
+{
+    local XComGameStateHistory History;
+    local XComGameState_Effect EffectState;
+	local StateObjectReference EffectRef;
+
+    History = `XCOMHISTORY;
+
+    foreach AffectedByEffects(EffectRef)
+    {
+        EffectState = XComGameState_Effect(History.GetGameStateForObjectID(EffectRef.ObjectID));
+        if (EffectState.GetX2Effect().ProvidesImmunityToEffect(Effect, EffectState, SourceUnit, self, AbilityState))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+//	End issue #1575
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // cpptext

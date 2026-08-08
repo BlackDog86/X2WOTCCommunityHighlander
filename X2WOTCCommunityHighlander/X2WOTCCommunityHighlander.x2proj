@@ -310,6 +310,12 @@
     <Content Include="Src\XComGame\Classes\UICustomize_SkirmisherHead.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\XComGame\Classes\UIDropShipBriefing_MissionEnd.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\UIEventQueue.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\XComGame\Classes\UIFacilityGrid_FacilityOverlay.uc">
       <SubType>Content</SubType>
     </Content>
@@ -463,6 +469,9 @@
     <Content Include="Src\XComGame\Classes\UITacticalHUD_Enemies.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\XComGame\Classes\UITacticalHUD_MouseControls.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\XComGame\Classes\UITacticalHUD_SoldierInfo.uc">
       <SubType>Content</SubType>
     </Content>
@@ -526,7 +535,13 @@
     <Content Include="Src\XComGame\Classes\X2Ability_Cyberus.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\XComGame\Classes\X2Ability_DarkEvents.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\XComGame\Classes\X2Ability_DefaultBondmateAbilities.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\X2Ability_PsiOperativeAbilitySet.uc">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\X2Ability_PsiWitch.uc">
@@ -556,6 +571,9 @@
     <Content Include="Src\XComGame\Classes\X2AbilityTrigger_EndOfMove.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\XComGame\Classes\X2Ability_TemplarAbilitySet.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\XComGame\Classes\X2Ability_TheLost.uc">
       <SubType>Content</SubType>
     </Content>
@@ -569,6 +587,9 @@
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\X2Action_PlaySoundAndFlyOver.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\X2Action_RevealAIBegin.uc">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\X2AIBTBehaviorTree.uc">
@@ -593,6 +614,9 @@
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\X2Camera_LookAt.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\X2CharacterTemplate.uc">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\X2ChosenActionTemplate.uc">
@@ -652,7 +676,16 @@
     <Content Include="Src\XComGame\Classes\X2Effect_LaserSight.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\XComGame\Classes\X2Effect_PersistentVoidConduit.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\X2Effect_SpawnDestructible.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\XComGame\Classes\X2Effect_Sustain.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\X2Effect_VoidConduit.uc">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\X2EncyclopediaTemplate.uc">
@@ -805,6 +838,9 @@
     <Content Include="Src\XComGame\Classes\XComEngine.uc">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Src\XComGame\Classes\XComEnvLightingManager.uc">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Src\XComGame\Classes\XComGameStateContext_Ability.uc">
       <SubType>Content</SubType>
     </Content>
@@ -836,6 +872,9 @@
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\XComGameState_AlienNetworkComponent.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\XComGameState_BattleData.uc">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\XComGameState_BlackMarket.uc">
@@ -929,6 +968,9 @@
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\XComGroupSpawn.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\XComInteractiveLevelActor.uc">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\XComOnlineEventMgr.uc">
@@ -1109,6 +1151,9 @@
       <SubType>Content</SubType>
     </Content>
     <Content Include="Src\XComGame\Classes\X2Effect_Brutal.uc">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Src\XComGame\Classes\UITacticalHUD_Perk.uc">
       <SubType>Content</SubType>
     </Content>
   </ItemGroup>

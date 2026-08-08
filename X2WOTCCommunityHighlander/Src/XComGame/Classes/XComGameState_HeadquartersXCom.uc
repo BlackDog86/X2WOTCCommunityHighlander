@@ -4110,13 +4110,14 @@ function bool HasUnModifiedItem(XComGameState AddToGameState, X2ItemTemplate Ite
 	{
 		for(idx = 0; idx < LootRecovered.Length; idx++)
 		{
-			ItemState = XComGameState_Item(`XCOMHISTORY.GetGameStateForObjectID(LootRecovered[idx].ObjectID));
+			// Begin Issue #1190 - Take the itemstate from the gamestate preferentially to history
+			ItemState = XComGameState_Item(AddToGameState.GetGameStateForObjectID(LootRecovered[idx].ObjectID));						
 
 			if(ItemState == none)
 			{
-				ItemState = XComGameState_Item(AddToGameState.GetGameStateForObjectID(LootRecovered[idx].ObjectID));
+				ItemState = XComGameState_Item(`XCOMHISTORY.GetGameStateForObjectID(LootRecovered[idx].ObjectID));
 			}
-
+			// End Issue #1190
 			if(ItemState != none)
 			{
 				if (ItemState.GetMyTemplateName() == ItemTemplate.DataName && (ItemState.Quantity > 0 || ItemState.GetMyTemplate().ItemCat == 'resource') && !ItemState.HasBeenModified())
@@ -4140,12 +4141,14 @@ function bool HasUnModifiedItem(XComGameState AddToGameState, X2ItemTemplate Ite
 	{
 		for(idx = 0; idx < Inventory.Length; idx++)
 		{
-			ItemState = XComGameState_Item(`XCOMHISTORY.GetGameStateForObjectID(Inventory[idx].ObjectID));
-
+			// Begin Issue #1190 - Take the itemstate from the gamestate preferentially to history
+			ItemState = XComGameState_Item(AddToGameState.GetGameStateForObjectID(Inventory[idx].ObjectID));
+						
 			if(ItemState == none)
 			{
-				ItemState = XComGameState_Item(AddToGameState.GetGameStateForObjectID(Inventory[idx].ObjectID));
+				ItemState = XComGameState_Item(`XCOMHISTORY.GetGameStateForObjectID(Inventory[idx].ObjectID));
 			}
+			// End Issue #1190
 
 			if(ItemState != none)
 			{
@@ -4196,8 +4199,24 @@ function bool PutItemInInventory(XComGameState AddToGameState, XComGameState_Ite
 	local X2ItemTemplate ItemTemplate;
 
 	ItemTemplate = ItemState.GetMyTemplate();
-
-	if( ItemState.HasBeenModified() || ItemTemplate.bAlwaysUnique )
+	// Begin Issue #1190 - Regorganise to use similar behaviour to unpackcacheitems - guards against
+	// the function potentially placing cache items (instead of their resources) in the inventory
+	if( !bLoot && ItemTemplate.ResourceTemplateName != '' && ItemTemplate.ResourceQuantity > 0 )
+	{
+		ItemTemplate = class'X2ItemTemplateManager'.static.GetItemTemplateManager().FindItemTemplate(ItemTemplate.ResourceTemplateName);
+		if(ItemTemplate != none)
+		{
+			NewInventoryItemState = ItemTemplate.CreateInstanceFromTemplate(AddToGameState);
+			NewInventoryItemState.Quantity = (ItemTemplate.ResourceQuantity * ItemState.Quantity);
+		}
+		if( NewInventoryItemState != none )
+		{
+			HQModified = PutItemInInventory(AddToGameState, NewInventoryItemState) || HQModified;
+			AddToGameState.RemoveStateObject(ItemState.ObjectID);
+		}
+	}
+	// End Issue #1190
+	else if( ItemState.HasBeenModified() || ItemTemplate.bAlwaysUnique )
 	{
 		HQModified = true;
 
@@ -4249,20 +4268,7 @@ function bool PutItemInInventory(XComGameState AddToGameState, XComGameState_Ite
 	if( !bLoot && (ItemTemplate.OnAcquiredFn != None) && ItemTemplate.HideInInventory )
 	{
 		HQModified = ItemTemplate.OnAcquiredFn(AddToGameState, ItemState) || HQModified;
-	}
-
-	// this item awards other items when acquired
-	if( !bLoot && ItemTemplate.ResourceTemplateName != '' && ItemTemplate.ResourceQuantity > 0 )
-	{
-		ItemTemplate = class'X2ItemTemplateManager'.static.GetItemTemplateManager().FindItemTemplate(ItemTemplate.ResourceTemplateName);
-		ItemState = ItemTemplate.CreateInstanceFromTemplate(AddToGameState);
-		ItemState.Quantity = ItemTemplate.ResourceQuantity;
-
-		if( ItemState != none )
-		{
-			HQModified = PutItemInInventory(AddToGameState, ItemState) || HQModified;
-		}
-	}
+	}	
 
 	return HQModified;
 }
@@ -4295,7 +4301,9 @@ function bool UnpackCacheItems(XComGameState NewGameState)
 	local X2ItemTemplate ItemTemplate, UnpackedItemTemplate;
 	local bool bXComHQModified;
 	local int i;
-
+	// Variable for Issue #1190
+	local XComGameState_Item NewItemState;
+	
 	History = `XCOMHISTORY;
 
 	// Open up any caches we received and add their contents to the loot list
@@ -4303,27 +4311,40 @@ function bool UnpackCacheItems(XComGameState NewGameState)
 	{
 		ItemState = XComGameState_Item(History.GetGameStateForObjectID(LootRecovered[i].ObjectID));
 		ItemTemplate = ItemState.GetMyTemplate();
-
-		// this item awards other items when acquired
-		if (ItemTemplate.ResourceTemplateName != '' && ItemTemplate.ResourceQuantity > 0)
+		
+		// Single line for Issue #1190 - None check item template
+		if (ItemTemplate != none)
 		{
-			UnpackedItemTemplate = class'X2ItemTemplateManager'.static.GetItemTemplateManager().FindItemTemplate(ItemTemplate.ResourceTemplateName);
-			ItemState = UnpackedItemTemplate.CreateInstanceFromTemplate(NewGameState);
-			ItemState.Quantity = ItemTemplate.ResourceQuantity;
-
-			if (ItemState != none)
+			// this item awards other items when acquired
+			if (ItemTemplate.ResourceTemplateName != '' && ItemTemplate.ResourceQuantity > 0)
 			{
-				// Remove the cache item which was opened
-				LootRecovered.Remove(i, 1);
-				i--;
-
-				// Then add whatever it gave us
-				LootRecovered.AddItem(ItemState.GetReference());
-				bXComHQModified = true;
+				UnpackedItemTemplate = class'X2ItemTemplateManager'.static.GetItemTemplateManager().FindItemTemplate(ItemTemplate.ResourceTemplateName);
+				// Begin Issue #1190
+				/// HL-Docs: ref:Bugfixes; issue:1190
+				/// Fixes an issue where loot caches / hack rewards were ignoring the quantity of caches obtained (resulting in only a single cache 
+				/// reward of each type being awarded at the end of a mission, regardless of how many were obtained). Also fixes the issue where 
+				/// resources obtained from different cache types (e.g. Large + small intel) were not stacking in the post mission UI.
+				if (HasUnModifiedItem(NewGameState, UnpackedItemTemplate, NewItemState, true))
+				{
+					NewItemState = XComGameState_Item(NewGameState.ModifyStateObject(class'XComGameState_Item', NewItemState.ObjectID));
+					NewItemState.Quantity += (ItemTemplate.ResourceQuantity * ItemState.Quantity);
+				}
+				else
+				{
+					NewItemState = UnpackedItemTemplate.CreateInstanceFromTemplate(NewGameState);
+					NewItemState.Quantity = (ItemTemplate.ResourceQuantity * ItemState.Quantity);
+					// Then add whatever it gave us
+					LootRecovered.AddItem(NewItemState.GetReference());					
+				} 
+			NewGameState.RemoveStateObject(ItemState.ObjectID);
+            bXComHQModified = true;
+			// Remove the cache item which was opened
+		    LootRecovered.Remove(i, 1);
+            i--;
+            // End Issue #1190
 			}
 		}
 	}
-
 	return bXComHQModified;
 }
 
@@ -9096,11 +9117,35 @@ function UpdateGameBoard()
 	super.UpdateGameBoard();
 }
 
-function AddSeenCharacterTemplate(X2CharacterTemplate CharacterTemplate)
+// Begin Issue #1492 
+/// HL-Docs: ref:Bugfixes; issue:1492
+/// This fix makes two key changes - 1. Adds new functions to XComGameStateHeadquarters_XCom which add individual template names to
+/// the 'first sighted aliens' array instead of their character groups. This is done to allow different narrative moments to play on 
+/// units within the same character group. 2. New functions CanPlayAmbientNarrativeMoment and UpdateAmbientNarrativeMoment 
+/// store each of the 'first sighted' narrative moments in the existing AmbientNarrativeMoments array, allowing us to check whether 
+/// or not these VOs have been played already. This is used to prevent units with different template names replaying narrative VO 
+/// each time a unit with a new template is spotted.
+function AddSeenIndividualCharacterTemplate(X2CharacterTemplate CharacterTemplate)
 {
-	SeenCharacterTemplates.AddItem(CharacterTemplate.CharacterGroupName);
+	SeenCharacterTemplates.AddItem(CharacterTemplate.DataName);
+	AddSeenCharacterTemplate(CharacterTemplate);
 }
 
+function bool HasSeenIndividualCharacterTemplate(X2CharacterTemplate CharacterTemplate)
+{
+	return (SeenCharacterTemplates.Find(CharacterTemplate.DataName) != INDEX_NONE);
+}
+
+
+function AddSeenCharacterTemplate(X2CharacterTemplate CharacterTemplate)
+{
+	// Issue #1492 - Only add the group if it doesn't exist already, since it could be added many times by AddSeenIndividualCharacterTemplate
+	If(SeenCharacterTemplates.Find(CharacterTemplate.CharacterGroupName) == INDEX_NONE)
+	{
+		SeenCharacterTemplates.AddItem(CharacterTemplate.CharacterGroupName);
+	}
+}
+// End Issue #1492
 function bool HasSeenCharacterTemplate(X2CharacterTemplate CharacterTemplate)
 {
 	return (SeenCharacterTemplates.Find(CharacterTemplate.CharacterGroupName) != INDEX_NONE);
@@ -9128,6 +9173,51 @@ function XComGameState_WorldRegion GetRegionByName(Name RegionTemplateName)
 //----------------   NARRATIVE   --------------------------------------------------------------
 //#############################################################################################
 
+// Begin Issue #1492
+//---------------------------------------------------------------------------------------
+function bool CanPlayAmbientNarrativeMoment(XComNarrativeMoment Moment)
+{
+	local int NarrativeInfoIdx;
+	local string NarrativeName;
+
+	NarrativeName = PathName(Moment);
+
+	NarrativeInfoIdx = PlayedAmbientNarrativeMoments.Find('QualifiedName', NarrativeName);
+
+	if(NarrativeInfoIdx == INDEX_NONE || PlayedAmbientNarrativeMoments[NarrativeInfoIdx].PlayCount < 1)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+//---------------------------------------------------------------------------------------
+function UpdateAmbientNarrativeMoments(XComNarrativeMoment Moment)
+{
+	local int NarrativeInfoIdx;
+	local string QualifiedName;
+	local AmbientNarrativeInfo NarrativeInfo;
+
+	QualifiedName = PathName(Moment);
+
+	NarrativeInfoIdx = PlayedAmbientNarrativeMoments.Find('QualifiedName', QualifiedName);
+
+	if(NarrativeInfoIdx != INDEX_NONE)
+	{
+		NarrativeInfo = PlayedAmbientNarrativeMoments[NarrativeInfoIdx];
+		`assert(NarrativeInfo.QualifiedName == QualifiedName);
+		NarrativeInfo.PlayCount++;
+		PlayedAmbientNarrativeMoments[NarrativeInfoIdx] = NarrativeInfo;
+	}
+	else
+	{
+		NarrativeInfo.QualifiedName = QualifiedName;
+		NarrativeInfo.PlayCount = 1;
+		PlayedAmbientNarrativeMoments.AddItem(NarrativeInfo);
+	}
+}
+// End Issue 1492
 //---------------------------------------------------------------------------------------
 function bool CanPlayLootNarrativeMoment(XComNarrativeMoment Moment)
 {
